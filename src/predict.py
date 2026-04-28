@@ -1,6 +1,6 @@
 import pandas as pd
 import joblib
-from src.feature_engineering import create_features
+from feature_engineering import create_features
 
 model = joblib.load("models/model.pkl")
 

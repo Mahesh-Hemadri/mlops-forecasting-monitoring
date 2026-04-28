@@ -2,7 +2,7 @@ import pandas as pd
 from xgboost import XGBRegressor
 import joblib
 
-from src.feature_engineering import create_features
+from feature_engineering import create_features
 
 def train():
     df = pd.read_csv("data/processed/cleaned.csv", parse_dates=['date'])

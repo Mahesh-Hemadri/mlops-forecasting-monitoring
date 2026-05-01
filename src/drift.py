@@ -1,5 +1,6 @@
 import pandas as pd
 from scipy.stats import ks_2samp
+import subprocess
 
 
 def load_data():
@@ -8,8 +9,11 @@ def load_data():
     return train_df, prod_df
 
 
+
+
+
+
 def check_drift(train_df, prod_df):
-    # compare sales distribution
     stat, p_value = ks_2samp(train_df["sales"], prod_df["sales"])
 
     print(f"KS Statistic: {stat}")
@@ -17,8 +21,14 @@ def check_drift(train_df, prod_df):
 
     if p_value < 0.05:
         print("⚠️ Drift detected!")
-    else:
-        print("✅ No drift detected")
+
+        # simple safeguard
+        if len(prod_df) > 50:
+            print("Triggering retraining...")
+            subprocess.run(["python", "src/train.py"])
+            print("✅ Model retrained and updated")
+        else:
+            print("Not enough production data to retrain")
 
 
 if __name__ == "__main__":

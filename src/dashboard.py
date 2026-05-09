@@ -52,6 +52,31 @@ stat, p_value = ks_2samp(
 drift_detected = p_value < 0.05
 
 # =========================
+# RETRAINING STATUS
+# =========================
+
+st.subheader("🔄 Retraining Status")
+
+try:
+
+    with open(
+        "logs/retraining_status.txt",
+        "r"
+    ) as f:
+
+        status = f.read()
+
+    if "retrained" in status.lower():
+        st.success(status)
+    else:
+        st.info(status)
+
+except:
+    st.warning(
+        "No retraining status available"
+    )
+
+# =========================
 # KPI SECTION
 # =========================
 

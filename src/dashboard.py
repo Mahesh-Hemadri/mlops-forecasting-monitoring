@@ -9,11 +9,10 @@ from scipy.stats import ks_2samp
 # -------------------------
 st.set_page_config(
     page_title="MLOps Dashboard",
-    page_icon="🚀",
     layout="wide"
 )
 
-st.title("🚀 MLOps Monitoring Dashboard")
+st.title(" MLOps Monitoring Dashboard")
 st.success("✅ Real-time ML Monitoring System Active")
 
 # -------------------------
@@ -55,7 +54,7 @@ drift_detected = p_value < 0.05
 # RETRAINING STATUS
 # =========================
 
-st.subheader("🔄 Retraining Status")
+st.subheader(" Retraining Status")
 
 try:
 
@@ -106,7 +105,7 @@ st.divider()
 left, right = st.columns(2)
 
 with left:
-    st.subheader("🧠 Drift Detection")
+    st.subheader(" Drift Detection")
 
     if drift_detected:
         st.error(
@@ -118,7 +117,7 @@ with left:
         )
 
 with right:
-    st.subheader("📦 Model Info")
+    st.subheader(" Model Info")
 
     st.info("""
     Model: XGBoost Regressor
@@ -144,7 +143,7 @@ chart1, chart2 = st.columns(2)
 
 with chart1:
 
-    st.subheader("📈 Predictions Trend")
+    st.subheader("Predictions Trend")
 
     fig, ax = plt.subplots(figsize=(6,4))
 
@@ -169,7 +168,7 @@ with chart1:
 
 with chart2:
 
-    st.subheader("📉 Actual vs Predicted")
+    st.subheader("Actual vs Predicted")
 
     fig, ax = plt.subplots(figsize=(6,4))
 
@@ -204,7 +203,7 @@ st.divider()
 # SUMMARY
 # =========================
 
-st.subheader("📊 System Summary")
+st.subheader("System Summary")
 
 summary_col1, summary_col2 = st.columns(2)
 

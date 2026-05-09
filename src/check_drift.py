@@ -32,8 +32,8 @@ print(f"P-value: {p_value}")
 # -------------------------
 if p_value < 0.05:
 
-    print("⚠️ Drift detected!")
-    print("🚀 Triggering retraining...")
+    print(" Drift detected!")
+    print(" Triggering retraining...")
 
     subprocess.run(
         ["python", "src/train.py"]
@@ -47,10 +47,10 @@ if p_value < 0.05:
     ) as f:
 
         f.write(
-            "✅ Model retrained successfully"
+            " Model retrained successfully"
         )
 
-    print("✅ Model retrained successfully")
+    print(" Model retrained successfully")
 
 else:
 
@@ -62,7 +62,7 @@ else:
     ) as f:
 
         f.write(
-            "✅ System stable - no retraining needed"
+            " System stable - no retraining needed"
         )
 
-    print("✅ No drift detected")
+    print(" No drift detected")

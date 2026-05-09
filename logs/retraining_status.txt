@@ -1,1 +1,1 @@
- System stable - no retraining needed
+No drift detected (p-value=0.81998)

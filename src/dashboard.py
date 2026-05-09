@@ -40,12 +40,14 @@ def calculate_rmse(actual, predicted):
 
 def detect_drift(reference_sales, recent_sales):
 
-    _, p_value = ks_2samp(
+    stat, p_value = ks_2samp(
         reference_sales,
         recent_sales
     )
 
-    return p_value < 0.05, p_value
+    drift_detected = p_value < 0.05
+
+    return drift_detected, p_value
 
 
 def load_retraining_status():

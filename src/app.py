@@ -2,7 +2,7 @@ import joblib
 import pandas as pd
 from fastapi import FastAPI
 
-from src.logger import log_prediction
+from prediction_logger import log_prediction
 
 
 app = FastAPI()

@@ -17,8 +17,15 @@ def load_recent_predictions():
 
 
 def detect_drift(reference_sales, recent_sales):
-    _, p_value = ks_2samp(reference_sales, recent_sales)
-    return p_value < DRIFT_THRESHOLD, p_value
+
+    stat, p_value = ks_2samp(
+        reference_sales,
+        recent_sales
+    )
+
+    drift_detected = p_value < DRIFT_THRESHOLD
+
+    return drift_detected, p_value
 
 
 def save_status(message):

@@ -4,104 +4,191 @@ import numpy as np
 import matplotlib.pyplot as plt
 from scipy.stats import ks_2samp
 
-st.set_page_config(page_title="MLOps Dashboard", layout="wide")
+# -------------------------
+# PAGE CONFIG
+# -------------------------
+st.set_page_config(
+    page_title="MLOps Dashboard",
+    page_icon="🚀",
+    layout="wide"
+)
 
 st.title("🚀 MLOps Monitoring Dashboard")
+st.success("✅ Real-time ML Monitoring System Active")
 
 # -------------------------
-# Load Data
+# LOAD DATA
 # -------------------------
 df = pd.read_csv("logs/predictions.csv")
 
-# Fix timestamps
-df["timestamp"] = pd.to_datetime(df["timestamp"], format="mixed", errors="coerce")
+df["timestamp"] = pd.to_datetime(
+    df["timestamp"],
+    format="mixed",
+    errors="coerce"
+)
+
 df = df.dropna(subset=["timestamp"])
 df = df.sort_values("timestamp")
 
 # -------------------------
-# Basic Metrics
+# METRICS
 # -------------------------
-st.subheader("📊 System Metrics")
+latest_pred = df["prediction"].iloc[-1]
+
+rmse = np.sqrt(
+    ((df["sales"] - df["prediction"]) ** 2).mean()
+)
+
+# -------------------------
+# DRIFT DETECTION
+# -------------------------
+train_df = pd.read_csv("data/processed/cleaned.csv")
+
+stat, p_value = ks_2samp(
+    train_df["sales"],
+    df["sales"]
+)
+
+drift_detected = p_value < 0.05
+
+# =========================
+# KPI SECTION
+# =========================
 
 col1, col2, col3 = st.columns(3)
 
-col1.metric("Total Predictions", len(df))
+col1.metric(
+    "Total Predictions",
+    len(df)
+)
 
-latest_pred = df["prediction"].iloc[-1]
-col2.metric("Latest Prediction", round(latest_pred, 2))
+col2.metric(
+    "Latest Prediction",
+    f"{latest_pred:.2f}"
+)
 
-rmse = np.sqrt(((df["sales"] - df["prediction"]) ** 2).mean())
-col3.metric("RMSE", round(rmse, 2))
+col3.metric(
+    "RMSE",
+    f"{rmse:.2f}"
+)
 
-# -------------------------
-# Drift Detection
-# -------------------------
-st.subheader("🧠 Drift Detection")
+st.divider()
 
-try:
-    train_df = pd.read_csv("data/processed/cleaned.csv")
+# =========================
+# DRIFT + MODEL INFO
+# =========================
 
-    stat, p_value = ks_2samp(train_df["sales"], df["sales"])
+left, right = st.columns(2)
 
-    if p_value < 0.05:
-        st.error(f"⚠️ Drift Detected (p-value={p_value:.5f})")
-        drift_detected = True
+with left:
+    st.subheader("🧠 Drift Detection")
+
+    if drift_detected:
+        st.error(
+            f"⚠️ Drift Detected (p-value={p_value:.5f})"
+        )
     else:
-        st.success(f"✅ No Drift (p-value={p_value:.5f})")
-        drift_detected = False
+        st.success(
+            f"✅ No Drift (p-value={p_value:.5f})"
+        )
 
-except:
-    st.warning("Training data not found — skipping drift detection")
-    drift_detected = False
+with right:
+    st.subheader("📦 Model Info")
+
+    st.info("""
+    Model: XGBoost Regressor
+    
+    Deployment: AWS EC2
+    
+    API: FastAPI
+    
+    Monitoring: Streamlit
+    """)
+
+st.divider()
+
+# =========================
+# CHARTS SIDE BY SIDE
+# =========================
+
+chart1, chart2 = st.columns(2)
 
 # -------------------------
-# Model Info
+# Prediction Trend
 # -------------------------
-st.subheader("🧠 Model Info")
 
-st.write("""
-- Model: XGBoost Regressor  
-- Deployment: AWS EC2  
-- API: FastAPI  
-- Monitoring: Streamlit  
-""")
+with chart1:
 
-# -------------------------
-# Predictions Over Time
-# -------------------------
-st.subheader("📈 Predictions Over Time")
+    st.subheader("📈 Predictions Trend")
 
-fig, ax = plt.subplots()
-ax.plot(df["timestamp"], df["prediction"], marker='o')
-ax.set_title("Predictions Trend")
-ax.set_xlabel("Time")
-ax.set_ylabel("Prediction")
-ax.grid(True)
-st.pyplot(fig)
+    fig, ax = plt.subplots(figsize=(6,4))
+
+    ax.plot(
+        df["timestamp"],
+        df["prediction"],
+        marker='o'
+    )
+
+    ax.set_xlabel("Time")
+    ax.set_ylabel("Prediction")
+    ax.grid(True)
+
+    plt.xticks(rotation=45)
+    plt.tight_layout()
+
+    st.pyplot(fig)
 
 # -------------------------
 # Actual vs Predicted
 # -------------------------
-st.subheader("📉 Actual vs Predicted")
 
-fig, ax = plt.subplots()
-ax.plot(df["timestamp"], df["sales"], label="Actual", marker='o')
-ax.plot(df["timestamp"], df["prediction"], label="Predicted", marker='x')
-ax.legend()
-ax.set_title("Model Performance")
-ax.set_xlabel("Time")
-ax.set_ylabel("Sales")
-ax.grid(True)
-st.pyplot(fig)
+with chart2:
 
-# -------------------------
-# Summary
-# -------------------------
+    st.subheader("📉 Actual vs Predicted")
+
+    fig, ax = plt.subplots(figsize=(6,4))
+
+    ax.plot(
+        df["timestamp"],
+        df["sales"],
+        label="Actual",
+        marker='o'
+    )
+
+    ax.plot(
+        df["timestamp"],
+        df["prediction"],
+        label="Predicted",
+        marker='x'
+    )
+
+    ax.legend()
+
+    ax.set_xlabel("Time")
+    ax.set_ylabel("Sales")
+    ax.grid(True)
+
+    plt.xticks(rotation=45)
+    plt.tight_layout()
+
+    st.pyplot(fig)
+
+st.divider()
+
+# =========================
+# SUMMARY
+# =========================
+
 st.subheader("📊 System Summary")
 
-st.write(f"""
-- Total Predictions: {len(df)}  
-- Latest Prediction: {latest_pred:.2f}  
-- RMSE: {rmse:.2f}  
-- Drift Status: {"Detected" if drift_detected else "Stable"}  
-""")
+summary_col1, summary_col2 = st.columns(2)
+
+with summary_col1:
+    st.write(f"• Total Predictions: {len(df)}")
+    st.write(f"• Latest Prediction: {latest_pred:.2f}")
+
+with summary_col2:
+    st.write(f"• RMSE: {rmse:.2f}")
+    st.write(
+        f"• Drift Status: {'Detected' if drift_detected else 'Stable'}"
+    )

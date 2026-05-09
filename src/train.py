@@ -2,7 +2,7 @@ import joblib
 import pandas as pd
 from xgboost import XGBRegressor
 
-from feature_engineering import create_features
+from src.feature_engineering import create_features
 
 
 MODEL_PATH = "models/model.pkl"

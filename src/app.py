@@ -1,40 +1,50 @@
-from fastapi import FastAPI
 import joblib
 import pandas as pd
-from src.feature_engineering import create_features
+from fastapi import FastAPI
+
 from src.logger import log_prediction
+
 
 app = FastAPI()
 
-# load model once
 model = joblib.load("models/model.pkl")
 
 
+def prepare_input(payload):
+
+    frame = pd.DataFrame([payload])
+
+    frame["date"] = pd.to_datetime(frame["date"])
+
+    frame["day_of_week"] = frame["date"].dt.dayofweek
+    frame["month"] = frame["date"].dt.month
+
+    sales_value = payload.get("sales", 0)
+
+    frame["lag_1"] = sales_value
+    frame["lag_7"] = sales_value
+
+    return frame[
+        ["day_of_week", "month", "lag_1", "lag_7"]
+    ]
+
+
 @app.get("/")
-def home():
-    return {"message": "ML Model API is running"}
+def health_check():
+    return {"status": "API running"}
 
 
 @app.post("/predict")
-def predict(data: dict):
-    df = pd.DataFrame([data])
+def predict(payload: dict):
 
-    # add basic features
-    df['date'] = pd.to_datetime(df['date'])
-    df['day_of_week'] = df['date'].dt.dayofweek
-    df['month'] = df['date'].dt.month
+    model_input = prepare_input(payload)
 
-    # TEMP FIX: dummy lag values
-    df['lag_1'] = data.get("sales", 0)
-    df['lag_7'] = data.get("sales", 0)
+    prediction = float(
+        model.predict(model_input)[0]
+    )
 
-    X = df[['day_of_week', 'month', 'lag_1', 'lag_7']]
+    log_prediction(payload, prediction)
 
-    preds = model.predict(X)
-    pred = float(preds[0])
-
-    # log it
-    log_prediction(data, pred)
-
-    return {"prediction": pred}
-    
+    return {
+        "prediction": round(prediction, 2)
+    }

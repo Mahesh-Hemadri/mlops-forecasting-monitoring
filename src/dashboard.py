@@ -1,156 +1,162 @@
-import streamlit as st
-import pandas as pd
-import numpy as np
 import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+import streamlit as st
 from scipy.stats import ks_2samp
 
-# -------------------------
-# PAGE CONFIG
-# -------------------------
+
 st.set_page_config(
     page_title="MLOps Dashboard",
     layout="wide"
 )
 
-st.title(" MLOps Monitoring Dashboard")
-st.success("✅ Real-time ML Monitoring System Active")
 
-# -------------------------
-# LOAD DATA
-# -------------------------
-df = pd.read_csv("logs/predictions.csv")
+PREDICTION_LOGS = "logs/predictions.csv"
+TRAINING_DATA = "data/processed/cleaned.csv"
 
-df["timestamp"] = pd.to_datetime(
-    df["timestamp"],
-    format="mixed",
-    errors="coerce"
-)
 
-df = df.dropna(subset=["timestamp"])
-df = df.sort_values("timestamp")
+def load_prediction_logs():
 
-# -------------------------
-# METRICS
-# -------------------------
-latest_pred = df["prediction"].iloc[-1]
+    logs = pd.read_csv(PREDICTION_LOGS)
 
-rmse = np.sqrt(
-    ((df["sales"] - df["prediction"]) ** 2).mean()
-)
-
-# -------------------------
-# DRIFT DETECTION
-# -------------------------
-train_df = pd.read_csv("data/processed/cleaned.csv")
-
-stat, p_value = ks_2samp(
-    train_df["sales"],
-    df["sales"]
-)
-
-drift_detected = p_value < 0.05
-
-# =========================
-# RETRAINING STATUS
-# =========================
-
-st.subheader(" Retraining Status")
-
-try:
-
-    with open(
-        "logs/retraining_status.txt",
-        "r"
-    ) as f:
-
-        status = f.read()
-
-    if "retrained" in status.lower():
-        st.success(status)
-    else:
-        st.info(status)
-
-except:
-    st.warning(
-        "No retraining status available"
+    logs["timestamp"] = pd.to_datetime(
+        logs["timestamp"],
+        format="mixed",
+        errors="coerce"
     )
 
-# =========================
-# KPI SECTION
-# =========================
+    logs = logs.dropna(subset=["timestamp"])
 
-col1, col2, col3 = st.columns(3)
+    return logs.sort_values("timestamp")
 
-col1.metric(
+
+def load_training_data():
+    return pd.read_csv(TRAINING_DATA)
+
+
+def calculate_rmse(actual, predicted):
+    return np.sqrt(((actual - predicted) ** 2).mean())
+
+
+def detect_drift(reference_sales, recent_sales):
+
+    _, p_value = ks_2samp(
+        reference_sales,
+        recent_sales
+    )
+
+    return p_value < 0.05, p_value
+
+
+def load_retraining_status():
+
+    try:
+        with open(
+            "logs/retraining_status.txt",
+            "r",
+            encoding="utf-8"
+        ) as file:
+
+            return file.read()
+
+    except FileNotFoundError:
+        return "No retraining activity found"
+
+
+prediction_logs = load_prediction_logs()
+historical_sales = load_training_data()
+
+latest_prediction = prediction_logs["prediction"].iloc[-1]
+
+rmse = calculate_rmse(
+    prediction_logs["sales"],
+    prediction_logs["prediction"]
+)
+
+drift_detected, p_value = detect_drift(
+    historical_sales["sales"],
+    prediction_logs["sales"]
+)
+
+retraining_status = load_retraining_status()
+
+
+st.title("MLOps Monitoring Dashboard")
+
+st.caption(
+    "FastAPI • XGBoost • Streamlit • AWS EC2"
+)
+
+st.success(
+    "Monitoring pipeline active"
+)
+
+
+metric_1, metric_2, metric_3 = st.columns(3)
+
+metric_1.metric(
     "Total Predictions",
-    len(df)
+    len(prediction_logs)
 )
 
-col2.metric(
+metric_2.metric(
     "Latest Prediction",
-    f"{latest_pred:.2f}"
+    round(latest_prediction, 2)
 )
 
-col3.metric(
+metric_3.metric(
     "RMSE",
-    f"{rmse:.2f}"
+    round(rmse, 2)
 )
+
 
 st.divider()
 
-# =========================
-# DRIFT + MODEL INFO
-# =========================
 
-left, right = st.columns(2)
+left_panel, right_panel = st.columns(2)
 
-with left:
-    st.subheader(" Drift Detection")
+
+with left_panel:
+
+    st.subheader("Drift Detection")
 
     if drift_detected:
         st.error(
-            f"⚠️ Drift Detected (p-value={p_value:.5f})"
+            f"Distribution shift detected (p-value={p_value:.5f})"
         )
     else:
         st.success(
-            f"✅ No Drift (p-value={p_value:.5f})"
+            f"System stable (p-value={p_value:.5f})"
         )
 
-with right:
-    st.subheader(" Model Info")
 
-    st.info("""
-    Model: XGBoost Regressor
-    
-    Deployment: AWS EC2
-    
-    API: FastAPI
-    
-    Monitoring: Streamlit
-    """)
+with right_panel:
+
+    st.subheader("Retraining Status")
+
+    if "retrained" in retraining_status.lower():
+        st.success(retraining_status)
+    else:
+        st.info(retraining_status)
+
 
 st.divider()
 
-# =========================
-# CHARTS SIDE BY SIDE
-# =========================
 
-chart1, chart2 = st.columns(2)
+chart_left, chart_right = st.columns(2)
 
-# -------------------------
-# Prediction Trend
-# -------------------------
 
-with chart1:
+with chart_left:
 
-    st.subheader("Predictions Trend")
+    st.subheader("Prediction Trend")
 
-    fig, ax = plt.subplots(figsize=(6,4))
+    fig, ax = plt.subplots(figsize=(5, 3))
 
     ax.plot(
-        df["timestamp"],
-        df["prediction"],
-        marker='o'
+        prediction_logs["timestamp"],
+        prediction_logs["prediction"],
+        marker="o",
+        linewidth=2
     )
 
     ax.set_xlabel("Time")
@@ -162,34 +168,31 @@ with chart1:
 
     st.pyplot(fig)
 
-# -------------------------
-# Actual vs Predicted
-# -------------------------
 
-with chart2:
+with chart_right:
 
     st.subheader("Actual vs Predicted")
 
-    fig, ax = plt.subplots(figsize=(6,4))
+    fig, ax = plt.subplots(figsize=(5, 3))
 
     ax.plot(
-        df["timestamp"],
-        df["sales"],
+        prediction_logs["timestamp"],
+        prediction_logs["sales"],
         label="Actual",
-        marker='o'
+        marker="o"
     )
 
     ax.plot(
-        df["timestamp"],
-        df["prediction"],
+        prediction_logs["timestamp"],
+        prediction_logs["prediction"],
         label="Predicted",
-        marker='x'
+        marker="x"
     )
-
-    ax.legend()
 
     ax.set_xlabel("Time")
     ax.set_ylabel("Sales")
+    ax.legend()
+
     ax.grid(True)
 
     plt.xticks(rotation=45)
@@ -197,22 +200,18 @@ with chart2:
 
     st.pyplot(fig)
 
+
 st.divider()
 
-# =========================
-# SUMMARY
-# =========================
 
-st.subheader("System Summary")
+summary_left, summary_right = st.columns(2)
 
-summary_col1, summary_col2 = st.columns(2)
+with summary_left:
+    st.write(f"Predictions processed: {len(prediction_logs)}")
+    st.write(f"Latest forecast: {latest_prediction:.2f}")
 
-with summary_col1:
-    st.write(f"• Total Predictions: {len(df)}")
-    st.write(f"• Latest Prediction: {latest_pred:.2f}")
-
-with summary_col2:
-    st.write(f"• RMSE: {rmse:.2f}")
+with summary_right:
+    st.write(f"Current RMSE: {rmse:.2f}")
     st.write(
-        f"• Drift Status: {'Detected' if drift_detected else 'Stable'}"
+        f"Drift status: {'Detected' if drift_detected else 'Stable'}"
     )

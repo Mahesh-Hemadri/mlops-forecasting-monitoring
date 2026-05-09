@@ -1,68 +1,70 @@
-import pandas as pd
-from scipy.stats import ks_2samp
 import subprocess
 
-# -------------------------
-# Load Training Data
-# -------------------------
-train_df = pd.read_csv(
-    "data/processed/cleaned.csv"
-)
+import pandas as pd
+from scipy.stats import ks_2samp
 
-# -------------------------
-# Load Prediction Logs
-# -------------------------
-pred_df = pd.read_csv(
-    "logs/predictions.csv"
-)
 
-# -------------------------
-# Drift Detection
-# -------------------------
-stat, p_value = ks_2samp(
-    train_df["sales"],
-    pred_df["sales"]
-)
+DRIFT_THRESHOLD = 0.05
+MIN_SAMPLES_FOR_RETRAINING = 10
 
-print(f"KS Statistic: {stat}")
-print(f"P-value: {p_value}")
 
-# -------------------------
-# Retraining Trigger
-# -------------------------
-if p_value < 0.05:
+def load_reference_data():
+    return pd.read_csv("data/processed/cleaned.csv")
 
-    print(" Drift detected!")
-    print(" Triggering retraining...")
 
-    subprocess.run(
-        ["python", "src/train.py"]
+def load_recent_predictions():
+    return pd.read_csv("logs/predictions.csv")
+
+
+def detect_drift(reference_sales, recent_sales):
+    _, p_value = ks_2samp(reference_sales, recent_sales)
+    return p_value < DRIFT_THRESHOLD, p_value
+
+
+def save_status(message):
+    with open(
+        "logs/retraining_status.txt",
+        "w",
+        encoding="utf-8"
+    ) as file:
+        file.write(message)
+
+
+def retrain_model():
+    print("Retraining model...")
+    subprocess.run(["python", "src/train.py"])
+    print("Model updated successfully")
+
+
+if __name__ == "__main__":
+
+    historical_sales = load_reference_data()
+    recent_predictions = load_recent_predictions()
+
+    if len(recent_predictions) < MIN_SAMPLES_FOR_RETRAINING:
+        print("Not enough prediction data for drift analysis")
+        save_status("Waiting for more production predictions")
+        exit()
+
+    drift_detected, p_value = detect_drift(
+        historical_sales["sales"],
+        recent_predictions["sales"]
     )
 
-    # Save retraining status
-    with open(
-        "logs/retraining_status.txt",
-        "w",
-        encoding="utf-8"
-    ) as f:
+    print(f"P-value: {p_value:.5f}")
 
-        f.write(
-            " Model retrained successfully"
+    if drift_detected:
+        print("Distribution shift detected")
+
+        retrain_model()
+
+        save_status(
+            f"Model retrained automatically (p-value={p_value:.5f})"
         )
 
-    print(" Model retrained successfully")
+    else:
+        print("System stable")
 
-else:
-
-    # Save stable status
-    with open(
-        "logs/retraining_status.txt",
-        "w",
-        encoding="utf-8"
-    ) as f:
-
-        f.write(
-            " System stable - no retraining needed"
+        save_status(
+            f"No drift detected (p-value={p_value:.5f})"
         )
-
-    print(" No drift detected")

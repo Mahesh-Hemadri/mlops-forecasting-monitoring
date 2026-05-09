@@ -1,24 +1,45 @@
+import joblib
 import pandas as pd
-import os
-from datetime import datetime
+from xgboost import XGBRegressor
 
-LOG_FILE = "logs/predictions.csv"
+from feature_engineering import create_features
 
 
-def log_prediction(input_data, prediction):
-    log_entry = {
-        "timestamp": datetime.now(),
-        "date": input_data.get("date"),
-        "sales": input_data.get("sales"),
-        "prediction": prediction
-    }
+MODEL_PATH = "models/model.pkl"
 
-    df = pd.DataFrame([log_entry])
 
-    if not os.path.exists("logs"):
-        os.makedirs("logs")
+def load_training_data():
+    return pd.read_csv(
+        "data/processed/cleaned.csv",
+        parse_dates=["date"]
+    )
 
-    if os.path.exists(LOG_FILE):
-        df.to_csv(LOG_FILE, mode='a', header=False, index=False)
-    else:
-        df.to_csv(LOG_FILE, index=False)
+
+def build_model():
+    return XGBRegressor(
+        n_estimators=100,
+        learning_rate=0.1,
+        random_state=42
+    )
+
+
+def train():
+
+    sales_data = load_training_data()
+
+    feature_data = create_features(sales_data)
+
+    X = feature_data.drop(columns=["sales", "date"])
+    y = feature_data["sales"]
+
+    model = build_model()
+
+    model.fit(X, y)
+
+    joblib.dump(model, MODEL_PATH)
+
+    print("Model training complete")
+
+
+if __name__ == "__main__":
+    train()

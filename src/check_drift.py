@@ -46,7 +46,8 @@ def retrain_model():
 if __name__ == "__main__":
 
     historical_sales = load_reference_data()
-    recent_predictions = load_recent_predictions()
+    recent_predictions = load_recent_predictions().tail(5)
+    
 
     if len(recent_predictions) < MIN_SAMPLES_FOR_RETRAINING:
         print("Not enough prediction data for drift analysis")
